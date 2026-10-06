@@ -330,6 +330,33 @@ def test_navigate():
     assert navd.to_text() == _dest_text
 
 
+@pytest.mark.parametrize('as_url', [False, True])
+@pytest.mark.parametrize('base, dest, expected', [
+    ('http://[::1]:8080/a', 'b', 'http://[::1]:8080/b'),
+    ('http://[::1]/a', '/b', 'http://[::1]/b'),
+    ('http://[::1]/a', '?q=1', 'http://[::1]/a?q=1'),
+    ('http://[::1]/a', '#frag', 'http://[::1]/a#frag'),
+    ('http://[::1]/a', '', 'http://[::1]/a'),
+    ('http://example.com/a', '//[2001:db8::1]/b',
+     'http://[2001:db8::1]/b'),
+    ('http://[::1]/a', '//example.com/b', 'http://example.com/b'),
+    ('http://[::1]/a', '//192.0.2.1/b', 'http://192.0.2.1/b'),
+    ('http://192.0.2.1/a', 'b', 'http://192.0.2.1/b'),
+])
+def test_navigate_preserves_host_family(as_url, base, dest, expected):
+    base_url = URL(base)
+    destination = URL(dest) if as_url else dest
+    result = base_url.navigate(destination)
+
+    assert result.to_text() == expected
+    assert result.to_text(full_quote=True) == expected
+    assert result == URL(expected)
+    assert result.navigate('next') == URL(expected).navigate('next')
+    assert base_url == URL(base)
+    if as_url:
+        assert destination == URL(dest)
+
+
 @pytest.mark.parametrize(
     ('expected', 'base', 'paths'), [
     ('https://host/b', 'https://host', ('a', '/b', )),
