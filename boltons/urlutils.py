@@ -566,7 +566,18 @@ class URL:
         """
         return QueryParamDict.from_text(self._query)
 
-    qp = query_params
+    @property
+    def qp(self):
+        """Alias for :attr:`query_params`."""
+        return self.query_params
+
+    @qp.setter
+    def qp(self, value):
+        self.query_params = value
+
+    @qp.deleter
+    def qp(self):
+        del self.query_params
 
     @property
     def path(self):

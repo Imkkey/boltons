@@ -95,6 +95,85 @@ def test_query_params(test_url):
     assert test_url.endswith(qp_text)
 
 
+@pytest.mark.parametrize('first_attr', ['qp', 'query_params'])
+@pytest.mark.parametrize('query', ['', '?tag=python&tag=testing'])
+def test_query_params_alias_identity(first_attr, query):
+    url = URL('https://example.com/' + query)
+    params = getattr(url, first_attr)
+    assert url.qp is params
+    assert url.query_params is params
+    assert url.qp is params
+
+
+def test_query_params_alias_mutations():
+    url = URL('https://example.com/?tag=python&drop=1')
+    url.qp.add('tag', 'testing')
+    url.qp['page'] = '2'
+    del url.qp['drop']
+    assert url.to_text() == 'https://example.com/?tag=python&tag=testing&page=2'
+    assert url.qp.getlist('tag') == ['python', 'testing']
+    assert url.to_text() == 'https://example.com/?tag=python&tag=testing&page=2'
+
+
+def test_query_params_alias_after_canonical_mutation():
+    url = URL('https://example.com/?page=1')
+    url.query_params['page'] = '2'
+    assert url.qp['page'] == '2'
+    assert url.to_text() == 'https://example.com/?page=2'
+
+
+def test_query_params_alias_from_parts():
+    url = URL.from_parts(scheme='https', host='example.com',
+                         query_params=[('page', '2')])
+    assert url.qp['page'] == '2'
+    assert url.to_text() == 'https://example.com?page=2'
+
+
+def test_query_params_alias_after_navigation():
+    url = URL('https://example.com/?page=1').navigate('?page=2')
+    assert url.qp['page'] == '2'
+    assert url.to_text() == 'https://example.com/?page=2'
+
+
+def test_query_params_alias_replacement():
+    url = URL('https://example.com/?page=1')
+    _ = url.qp
+    params = QueryParamDict([('page', '2')])
+    url.query_params = params
+    assert url.qp is params
+    assert url.to_text() == 'https://example.com/?page=2'
+
+
+def test_query_params_alias_cache_reset():
+    url = URL('https://example.com/?page=1')
+    params = url.qp
+    params['page'] = '2'
+    del url.query_params
+    assert url.qp is not params
+    assert url.qp is url.query_params
+    assert url.qp['page'] == '1'
+
+
+def test_query_params_alias_assignment():
+    url = URL('https://example.com/?page=1')
+    _ = url.qp
+    params = QueryParamDict([('page', '2')])
+    url.qp = params
+    assert url.qp is params
+    assert url.query_params is params
+    assert url.to_text() == 'https://example.com/?page=2'
+
+
+def test_query_params_alias_deletion():
+    url = URL('https://example.com/?page=1')
+    params = url.qp
+    params['page'] = '2'
+    del url.qp
+    assert url.qp is not params
+    assert url.qp is url.query_params
+    assert url.qp['page'] == '1'
+
+
 def test_parse_qsl_encoding():
     # %E9 is 'e' with an acute accent in latin-1, and not valid utf-8
     qs = 'k=%E9'
